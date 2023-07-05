@@ -25,23 +25,17 @@ def hello():
     """
 
 #レコードの登録
-@app.route("/create/<table>",methods=["POST"]) 
-def add_remind(table):
+@app.route("/create/remind",methods=["POST"]) 
+def add_remind():
     data = json.loads(request.data.decode('utf-8'))
     now=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     pprint(data)
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        if table=="remind":
-            sql=f"""
-                INSERT INTO tasks(name,since,until,music,latest)
-                VALUES('{data["name"]}','{data["since"]}','{data["until"]}',{data["music"]},'{now}');
-            """
-        elif table=="music":
-            sql=f"""
-            """
-        else:
-            return Response(status=400,response=json.dumps({"reason":"Table name Not found"}))
+        sql=f"""
+            INSERT INTO tasks(name,since,until,music,latest)
+            VALUES('{data["name"]}','{data["since"]}','{data["until"]}',{data["music"]},'{now}');
+        """
         result=db.query_1(sql)
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
@@ -82,26 +76,25 @@ def get_remind(table):
     else:
         return Response(status=200,response=json.dumps(result))
 
-#音楽ファイルのアップロード
-# 参考リンク
-# https://blog.imind.jp/entry/2020/01/25/032249
-@app.route('/upload/music/<filename>', methods=['POST'])
-def upload(filename):
-    pprint(request.files)
-    if 'file' not in request.files:
+# 音楽の追加
+@app.route('/upload/music/<filename>', methods=["POST"])
+def get_test(filename):
+    if 'file' not in request.files: # ファイルがなかった場合
         return Response(status=400,response=json.dumps({"reason":"File not found"}))
-
-    # fileの取得（FileStorage型で取れる）
-    # https://tedboy.github.io/flask/generated/generated/werkzeug.FileStorage.html
-    fs = request.files['file']
-
-    # 下記のような情報がFileStorageからは取れる
-    app.logger.info(f'file_name={fs.filename}')
-    app.logger.info(f'content_type={fs.content_type} content_length={fs.content_length}, mimetype={fs.mimetype}, mimetype_params={fs.mimetype_params}')
-
-    # ファイルを保存
-    fs.save("musics/"+filename)
-
+    """
+    file = request.files['file']    # データの取り出し
+    if file.filename == '':         # ファイル名がなかった場合
+        return Response(status=400,response=json.dumps({"reason":"File not found"}))
+    if file and allwed_file(file.filename):
+        filename = secure_filename(file.filename)   # 危険な文字を削除（サニタイズ処理）
+        # ファイルの保存し保存したファイルから動画読み出し.
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        Camera.cap = cv2.VideoCapture(UPLOAD_FOLDER+"/"+filename)
+        return redirect("/")                        # アップロード後のページに転送
+    else:
+        print("not movie file")
+        return redirect("/")
+    """
     return Response(status=200)
 
 if __name__=="__main__":
