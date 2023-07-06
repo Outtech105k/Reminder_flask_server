@@ -76,27 +76,20 @@ def get_remind(table):
     else:
         return Response(status=200,response=json.dumps(result))
 
+#参考 https://elsammit-beginnerblg.hatenablog.com/entry/2021/06/03/230222
 # 音楽の追加
 @app.route('/upload/music/<filename>', methods=["POST"])
 def get_test(filename):
     if 'file' not in request.files: # ファイルがなかった場合
+        print("NotFoundError happened")
         return Response(status=400,response=json.dumps({"reason":"File not found"}))
-    """
     file = request.files['file']    # データの取り出し
     if file.filename == '':         # ファイル名がなかった場合
         return Response(status=400,response=json.dumps({"reason":"File not found"}))
-    if file and allwed_file(file.filename):
-        filename = secure_filename(file.filename)   # 危険な文字を削除（サニタイズ処理）
-        # ファイルの保存し保存したファイルから動画読み出し.
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        Camera.cap = cv2.VideoCapture(UPLOAD_FOLDER+"/"+filename)
-        return redirect("/")                        # アップロード後のページに転送
-    else:
-        print("not movie file")
-        return redirect("/")
-    """
+    file.save(os.path.join("musics",filename))
+    print(filename)
     return Response(status=200)
 
 if __name__=="__main__":
-	port=int(os.getenv("PORT",5000))
-	app.run(debug=True)
+	port=int(os.getenv("PORT",8000))
+	app.run(host='0.0.0.0',port=port,debug=True)
