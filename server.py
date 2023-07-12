@@ -1,9 +1,7 @@
 from flask import *
 from flask_cors import CORS
-import os
-import json
+import os,json,datetime,pathlib
 from pprint import pprint
-import datetime
 
 import dbctl
 
@@ -14,15 +12,7 @@ CORS(app)
 #ブラウザでの来訪者への説明
 @app.route("/")
 def hello():
-    return """
-        <h1>Hello! This is Flask server!</h1>
-        <h2>Notice:</h2>
-        <p>This server is built for reminder software.</p>
-        <p>It is not built for website display.</p>
-        <br />
-        <p>このサーバーは、リマインダーソフトのために構築されています。</p>
-        <p>Webサイト表示のためには構築されていません。</p>
-    """
+    return render_template("index.html")
 
 #レコードの登録
 @app.route("/create/remind",methods=["POST"]) 
@@ -45,6 +35,18 @@ def add_remind():
             return Response(status=200)
         else:
             return Response(status=500,response=json.dumps({"status":False,"reason":"Running SQLite responce has problem"}))
+
+#レコードの削除
+@app.route("/remove/remind/<id>",methods=["delete"])
+def del_remind(id):
+    try:
+        db=dbctl.ManageRemainderDB('remind.db')
+        result=db.query_1(f"DELETE FROM tasks WHERE id={id}")
+    except Exception as err:
+        print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
+        return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
+    else:
+        return Response(status=200,response=json.dumps(result))
 
 #レコードの取得
 @app.route("/reference/<table>",methods=["POST"])
@@ -79,17 +81,38 @@ def get_remind(table):
 #参考 https://elsammit-beginnerblg.hatenablog.com/entry/2021/06/03/230222
 # 音楽の追加
 @app.route('/upload/music/<filename>', methods=["POST"])
-def get_test(filename):
-    print(request.files)
-    if 'file' not in request.files: # ファイルがなかった場合
+def receive_music(filename):
+    #ファイルアップロード
+    allowed_extentions=[".mp3",".wav"]
+    if not 'file' in request.files: # ファイルがなかった場合
         print("NotFoundError happened")
         return Response(status=400,response=json.dumps({"reason":"File not found"}))
     file = request.files['file']    # データの取り出し
     if file.filename == '':         # ファイル名がなかった場合
         return Response(status=400,response=json.dumps({"reason":"File name is NULL"}))
+
+    suffix = pathlib.Path(file.filename).suffix
+    if not suffix in allowed_extentions:
+        return Response(status=400,response=json.dumps({"reason":"File extensions is wrong"}))
     file.save(os.path.join("musics",filename))
-    print(filename)
-    return Response(status=200)
+    try:
+        db=dbctl.ManageRemainderDB('remind.db')
+        result=db.query_1(f"INSERT INTO musics(music_name) VALUES('{filename}');")
+    except Exception as err:
+        print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
+        return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
+    else:
+        return Response(status=200,response=json.dumps(result))
+
+#音楽の取得
+@app.route("/download/music/<id>")
+def send_music(id):
+    db=dbctl.ManageRemainderDB('remind.db')
+    result=db.query_1(f"SELECT music_name FROM musics WHERE id={id};")
+    if len(result)>1:
+        return Response(status=500,response=json.dumps({"reason":"Same id records has more than 2."}))
+    else:
+        return send_file('musics/'+result[0]["music_name"],as_attachment=True)
 
 if __name__=="__main__":
 	port=int(os.getenv("PORT",8000))
