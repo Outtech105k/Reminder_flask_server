@@ -4,6 +4,7 @@ class ManageRemainderDB():
     def __init__(self,dbname:str) -> None:
         """データベース接続のセットアップ"""
         self.conn=sqlite3.connect(dbname)
+        self.conn.row_factory=sqlite3.Row
         self.cur=self.conn.cursor()
 
     def query_1(self,sql):
@@ -12,6 +13,8 @@ class ManageRemainderDB():
         SQLエラーでは'sqlite3.OperationalErrorが発生'"""
         self.cur.execute(sql)
         self.conn.commit()
-        return self.cur.fetchall()
+        result= [dict(row) for row in self.cur.fetchall()]
+        return result
+
     def close(self):
         self.conn.close()

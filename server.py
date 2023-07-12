@@ -80,12 +80,13 @@ def get_remind(table):
 # 音楽の追加
 @app.route('/upload/music/<filename>', methods=["POST"])
 def get_test(filename):
+    print(request.files)
     if 'file' not in request.files: # ファイルがなかった場合
         print("NotFoundError happened")
         return Response(status=400,response=json.dumps({"reason":"File not found"}))
     file = request.files['file']    # データの取り出し
     if file.filename == '':         # ファイル名がなかった場合
-        return Response(status=400,response=json.dumps({"reason":"File not found"}))
+        return Response(status=400,response=json.dumps({"reason":"File name is NULL"}))
     file.save(os.path.join("musics",filename))
     print(filename)
     return Response(status=200)
