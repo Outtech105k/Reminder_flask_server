@@ -15,18 +15,29 @@ def hello():
     return render_template("index.html")
 
 #レコードの登録
-@app.route("/create/remind",methods=["POST"]) 
+@app.route("/remind",methods=["POST"]) 
 def add_remind():
     data = json.loads(request.data.decode('utf-8'))
     now=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     pprint(data)
+    if len(data["musics"])<=0:
+        return Response(status=400,response=json.dumps({"reason":"Param `musics`'s length is 0."}))
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        sql=f"""
-            INSERT INTO tasks(name,since,until,music,latest)
-            VALUES('{data["name"]}','{data["since"]}','{data["until"]}',{data["music"]},'{now}');
-        """
-        result=db.query_1(sql)
+        result=db.query_1(f"""
+                          INSERT INTO tasks(name,since,until,latest)
+                          VALUES('{data["name"]}','{data["since"]}','{data["until"]}','{now}');
+                          """)
+        result=db.query_1(f"""SELECT id FROM tasks
+                          WHERE latest='{now}';
+                          """)
+        if len(result)!=1:
+            return Response(status=500,response=json.dumps({"reason":"Inserted task not found."}))
+        for x in range(len(data["musics"])):
+            result=db.query_1(f"""
+                              INSERT INTO task_musics(task_id,music_id,play_order,latest)
+                              VALUES({result[0]["id"]},{data[x]},{x},'{now}');
+                              """)
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -37,7 +48,7 @@ def add_remind():
             return Response(status=500,response=json.dumps({"status":False,"reason":"Running SQLite responce has problem"}))
 
 #レコードの削除
-@app.route("/remove/remind/<id>",methods=["delete"])
+@app.route("/remind/<id>",methods=["DELETE"])
 def del_remind(id):
     try:
         db=dbctl.ManageRemainderDB('remind.db')
@@ -47,31 +58,25 @@ def del_remind(id):
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
     else:
         return Response(status=200,response=json.dumps(result))
-
-#レコードの取得
-@app.route("/reference/<table>",methods=["POST"])
-def get_remind(table):
-    data=json.loads(request.data.decode('utf-8'))
+        
+#リマインドレコードの取得
+@app.route("/remind",methods=["GET"])
+def get_remind():
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        if table=="remind":
-            result=db.query_1(f"""
-                            SELECT * FROM tasks
-                            WHERE 1=1 
-                            {f"AND since>='{data['since_since']}'" if "since_since" in data else ""} 
-                            {f"AND since<='{data['since_until']}'" if "since_until" in data else ""} 
-                            {f"AND until<='{data['until_since']}'" if "until_since" in data else ""} 
-                            {f"AND until<='{data['until_until']}'" if "until_until" in data else ""} 
-                            ;
-                            """)
-        elif table=="music":
-            result=db.query_1(f"""
-                              SELECT * FROM musics 
-                              WHERE 1=1 
-                              ;
-                              """)
-        else:
-            return Response(status=400,response=json.dumps({"reason":"Table name Not found"}))
+        result=db.query_1(f"""SELECT * FROM tasks;""")
+    except Exception as err:
+        print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
+        return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
+    else:
+        return Response(status=200,response=json.dumps(result))
+
+#音楽レコードの取得
+@app.route("/music/list",methods=["GET"])
+def get_music_list():
+    try:
+        db=dbctl.ManageRemainderDB('remind.db')
+        result=db.query_1(f"""SELECT * FROM musics;""")
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -80,7 +85,7 @@ def get_remind(table):
 
 #参考 https://elsammit-beginnerblg.hatenablog.com/entry/2021/06/03/230222
 # 音楽の追加
-@app.route('/upload/music/<filename>', methods=["POST"])
+@app.route('/music/<filename>', methods=["POST"])
 def receive_music(filename):
     #ファイルアップロード
     allowed_extentions=[".mp3",".wav"]
@@ -95,9 +100,11 @@ def receive_music(filename):
     if not suffix in allowed_extentions:
         return Response(status=400,response=json.dumps({"reason":"File extensions is wrong"}))
     file.save(os.path.join("musics",filename))
+
+    now=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        result=db.query_1(f"INSERT INTO musics(music_name) VALUES('{filename}');")
+        result=db.query_1(f"INSERT INTO musics(music_name,latest) VALUES('{filename}','{now}');")
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -105,7 +112,7 @@ def receive_music(filename):
         return Response(status=200,response=json.dumps(result))
 
 #音楽の取得
-@app.route("/download/music/<id>")
+@app.route("/music/<id>")
 def send_music(id):
     db=dbctl.ManageRemainderDB('remind.db')
     result=db.query_1(f"SELECT music_name FROM musics WHERE id={id};")
