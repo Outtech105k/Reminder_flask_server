@@ -20,39 +20,36 @@ def add_remind():
     data = json.loads(request.data.decode('utf-8'))
     now=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     pprint(data)
-    if len(data["musics"])<=0:
-        return Response(status=400,response=json.dumps({"reason":"Param `musics`'s length is 0."}))
     try:
+        if len(data["musics"])<=0:
+            return Response(status=400,response=json.dumps({"reason":"Param `musics`'s length is 0."}))
         db=dbctl.ManageRemainderDB('remind.db')
-        result=db.query_1(f"""
-                          INSERT INTO tasks(name,since,until,latest)
-                          VALUES('{data["name"]}','{data["since"]}','{data["until"]}','{now}');
-                          """)
+        db.query_1(f"""
+                   INSERT INTO tasks(name,since,until,latest)
+                   VALUES('{data["name"]}','{data["since"]}','{data["until"]}','{now}');
+                   """)
         result=db.query_1(f"""SELECT id FROM tasks
                           WHERE latest='{now}';
                           """)
         if len(result)!=1:
             return Response(status=500,response=json.dumps({"reason":"Inserted task not found."}))
         for x in range(len(data["musics"])):
-            result=db.query_1(f"""
-                              INSERT INTO task_musics(task_id,music_id,play_order,latest)
-                              VALUES({result[0]["id"]},{data[x]},{x},'{now}');
-                              """)
+            db.query_1(f"""
+                       INSERT INTO task_musics(task_id,music_id,play_order,latest)
+                       VALUES({result[0]["id"]},{data["musics"][x]},{x},'{now}');
+                       """)
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
     else:
-        if len(result)==0:
-            return Response(status=200)
-        else:
-            return Response(status=500,response=json.dumps({"status":False,"reason":"Running SQLite responce has problem"}))
+        return Response(status=200)
 
 #レコードの削除
 @app.route("/remind/<id>",methods=["DELETE"])
 def del_remind(id):
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        result=db.query_1(f"DELETE FROM tasks WHERE id={id}")
+        result=db.query_1(f"DELETE FROM tasks WHERE id={id};")
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -64,7 +61,7 @@ def del_remind(id):
 def get_remind():
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        result=db.query_1(f"""SELECT * FROM tasks;""")
+        result=db.query_1(f"""SELECT * FROM tasks ORDER BY until ASC;""")
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -76,7 +73,7 @@ def get_remind():
 def get_music_list():
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        result=db.query_1(f"""SELECT * FROM musics;""")
+        result=db.query_1(f"""SELECT * FROM musics ORDER BY latest DESC;""")
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -104,7 +101,7 @@ def receive_music(filename):
     now=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     try:
         db=dbctl.ManageRemainderDB('remind.db')
-        result=db.query_1(f"INSERT INTO musics(music_name,latest) VALUES('{filename}','{now}');")
+        result=db.query_1(f"INSERT INTO musics(file_name,latest) VALUES('{filename}','{now}');")
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
