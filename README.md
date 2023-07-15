@@ -9,3 +9,6 @@
 
 ### エンドポイントの解説ファイル
 https://docs.google.com/document/d/1CF46dFiHTKiAjP3NdTxM9gloXW1hBildQpgXdXkgbL8/edit?usp=sharing
+
+### 参考リンク
+https://elsammit-beginnerblg.hatenablog.com/entry/2021/06/03/230222

@@ -28,7 +28,8 @@ def add_remind():
                    INSERT INTO tasks(name,since,until,latest)
                    VALUES('{data["name"]}','{data["since"]}','{data["until"]}','{now}');
                    """)
-        result=db.query_1(f"""SELECT id FROM tasks
+        result=db.query_1(f"""
+                          SELECT id FROM tasks
                           WHERE latest='{now}';
                           """)
         if len(result)!=1:
@@ -74,6 +75,7 @@ def get_music_list():
     try:
         db=dbctl.ManageRemainderDB('remind.db')
         result=db.query_1(f"""SELECT * FROM musics ORDER BY latest DESC;""")
+        result.insert(0,{"id":-1,"file_name":"未選択"})
     except Exception as err:
         print('\x1b[37m\x1b[41m',type(err),err,'\x1b[0m')
         return Response(status=400,response=json.dumps({"reason":str(type(err))+' '+str(err)}))
@@ -109,7 +111,7 @@ def receive_music(filename):
         return Response(status=200,response=json.dumps(result))
 
 #音楽の取得
-@app.route("/music/<id>")
+@app.route("/music/<id>",methods=["GET"])
 def send_music(id):
     db=dbctl.ManageRemainderDB('remind.db')
     result=db.query_1(f"SELECT music_name FROM musics WHERE id={id};")
@@ -118,7 +120,21 @@ def send_music(id):
     else:
         return send_file('musics/'+result[0]["music_name"],as_attachment=True)
 
+@app.route("/notification",methods=["GET"])
+def calc_notice():
+    db=dbctl.ManageRemainderDB('remind.db')
+    result=db.query_1(f"""SELECT t.id,t.name,t.since,t.until,t.latest,tm.music_id,tm.play_order
+                      FROM tasks t
+                      INNER JOIN task_musics tm ON t.id=tm.task_id
+                      WHERE tm.music_id>0;
+                      """)
+    table=[]
+    for x in result:
+        since=datetime.datetime.strptime(x["since"],"%Y-%m-%dT%H:%M:%S")
+        until=datetime.datetime.strptime(x["until"],"%Y-%m-%dT%H:%M:%S")
+        delta=until-since
+    return Response(status=503)
+
 if __name__=="__main__":
-    print("It works!")
     port=int(os.getenv("PORT",8000))
     app.run(host='0.0.0.0',port=port,debug=True)
