@@ -123,17 +123,32 @@ def send_music(id):
 @app.route("/notification",methods=["GET"])
 def calc_notice():
     db=dbctl.ManageRemainderDB('remind.db')
-    result=db.query_1(f"""SELECT t.id,t.name,t.since,t.until,t.latest,tm.music_id,tm.play_order
+    result=db.query_1(f"""SELECT t.id,t.name,t.since,t.until,t.latest,tm.music_id,m.file_name,tm.play_order
                       FROM tasks t
                       INNER JOIN task_musics tm ON t.id=tm.task_id
+                      INNER JOIN musics m ON m.id=tm.music_id
                       WHERE tm.music_id>0;
                       """)
-    table=[]
     for x in result:
-        since=datetime.datetime.strptime(x["since"],"%Y-%m-%dT%H:%M:%S")
-        until=datetime.datetime.strptime(x["until"],"%Y-%m-%dT%H:%M:%S")
-        delta=until-since
-    return Response(status=503)
+        x["latest"]=datetime.datetime.strptime(x["latest"],"%Y-%m-%dT%H:%M:%S")
+        x["since"]=datetime.datetime.strptime(x["since"],"%Y-%m-%dT%H:%M:%S")
+        x["until"]=datetime.datetime.strptime(x["until"],"%Y-%m-%dT%H:%M:%S")
+        x["notice"]=((x["until"]-x["since"])*x["play_order"]/4)+x["since"]
+
+    #MIN探索
+    table=[]
+    now=datetime.datetime.now()
+    for x in result:
+        if now<=x["notice"]:
+            table.append(x)
+
+    table=min(table,key=lambda y:y["notice"])
+    table["latest"]=table["latest"].strftime("%Y-%m-%dT%H:%M:%S")
+    table["since"] =table["since"].strftime("%Y-%m-%dT%H:%M:%S")
+    table["until"] =table["until"].strftime("%Y-%m-%dT%H:%M:%S")
+    table["notice"]=table["notice"].strftime("%Y-%m-%dT%H:%M:%S")
+    
+    return Response(status=200,response=json.dumps(table))
 
 if __name__=="__main__":
     port=int(os.getenv("PORT",8000))
