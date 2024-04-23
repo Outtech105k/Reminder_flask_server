@@ -18,5 +18,5 @@ https://docs.google.com/document/d/1CF46dFiHTKiAjP3NdTxM9gloXW1hBildQpgXdXkgbL8/
 ### 参考リンク
 https://elsammit-beginnerblg.hatenablog.com/entry/2021/06/03/230222
 
-### LICENSE
-[MIT LICENSE](LICENSE)を適用します。
+# LICENSE
+[MIT License](LICENSE)を適用します。
