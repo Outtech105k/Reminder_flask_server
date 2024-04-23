@@ -1,8 +1,7 @@
 # Overview
 
 AizuHack 2023 IoT部門作品のプロジェクトファイルです。
-
-Python venv環境でFlaskサーバを起動します。
+Python venv環境で、リマインダに必要なFlaskサーバを起動します。
 
 # 使用方法
 1. Python/pipのセットアップ
@@ -18,3 +17,6 @@ https://docs.google.com/document/d/1CF46dFiHTKiAjP3NdTxM9gloXW1hBildQpgXdXkgbL8/
 
 ### 参考リンク
 https://elsammit-beginnerblg.hatenablog.com/entry/2021/06/03/230222
+
+### LICENSE
+[MIT LICENSE](LICENSE)を適用します。
