@@ -1,6 +1,8 @@
 # Overview
 
-AizuHack 2023 IoT部門作品のプロジェクトファイルです
+AizuHack 2023 IoT部門作品のプロジェクトファイルです。
+
+Python venv環境でFlaskサーバを起動します。
 
 # 使用方法
 1. Python/pipのセットアップ
